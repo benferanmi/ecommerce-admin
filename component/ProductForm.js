@@ -2,25 +2,35 @@ import axios from "axios";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/router"
 import { useEffect, useState } from "react"
+import Spinner from "./Spinner";
 
 export default function ProductForm({
   _id,
   title: existingTitle,
   description: existingDescription,
   price: esistingPrice,
-  image: existingImage
+  uploadedFiles: existingFiles
 }) {
   const [title, setTitle] = useState(existingTitle || '');
   const [description, setDescription] = useState(existingDescription || '');
   const [price, setPrice] = useState(esistingPrice || '');
   const [goToProducts, setGoToProducts] = useState(false);
-  const [image, setImage] = useState(existingImage || '');
-  const [prevImage, setprevImage] = useState(null)
+  const [uploadedFiles, setUploadedFiles] = useState(existingFiles || []);
+  const [loading, setLoading] = useState(false);
   const router = useRouter()
+
+
+  const fliteredImages = {};
+  const filteredArray = uploadedFiles.filter(obj => {
+    const key = obj.filePath;
+    const isUnique = !fliteredImages[key];
+    fliteredImages[key] = true;
+    return isUnique;
+  });
 
   async function saveProduct(e) {
     e.preventDefault();
-    const data = { title, description, price, image }
+    const data = { title, description, price, uploadedFiles:filteredArray }
     if (_id) {
       //update
       await axios.put('/api/products', { ...data, _id })
@@ -32,22 +42,23 @@ export default function ProductForm({
     }
   };
 
+  console.log("this is flittered array" + filteredArray.map(index => index.filePath));
+
   if (goToProducts) {
     router.push('/products')
   }
 
   async function uploadImages(e) {
     e.preventDefault();
-    setprevImage(URL.createObjectURL(e.target.files[0]));
-
+    setLoading(true)
     const files = e.target.files
+
     if (files?.length > 0) {
       const data = new FormData();
 
       for (const file of files) {
         data.append('file', file);
       }
-      data.append('username', title);
       try {
         const response = await fetch('/api/upload', {
           method: 'POST',
@@ -55,11 +66,9 @@ export default function ProductForm({
         });
 
         if (response.ok) {
-          const responseData = await response.json();
-          console.log("this is the file name" + responseData.fileName)
-          const fileName = responseData.fileName;
-          setImage(fileName)
-          console.log(fileName)
+          const responseData = await response.json()
+          setUploadedFiles([...existingFiles, ...responseData.uploadedFiles]);
+          setLoading(false)
         } else {
           console.error('Error:', response.statusText);
         }
@@ -68,8 +77,8 @@ export default function ProductForm({
       }
     }
   }
+  console.log("this is uploaded" + uploadedFiles.map(file => file.filePath));
 
-  console.log("this is image" + image)
 
   return (
     <form onSubmit={saveProduct}>
@@ -92,19 +101,19 @@ export default function ProductForm({
           </div>
           <input
             onChange={uploadImages}
+            multiple
             id="images"
             type="file"
             className="hidden" />
         </label>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {
-            image?.length && (
-              <img src={'/upload/' + image} className="h-50"></img>
-            )
+            filteredArray?.map((file, index) => (
+              <img key={index} src={'/' + file.filePath} className="h-24 w-24"></img>
+            ))
           }
-          {prevImage?.length && (
-            <div><img src={prevImage} className="h-50" /></div>
-          )
+          {
+            loading && <div class="flex align-center justify-center "><Spinner /></div>
           }
         </div>
 

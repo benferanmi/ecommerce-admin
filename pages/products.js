@@ -23,8 +23,8 @@ export default function Products() {
 
                 <tbody>
                     {
-                        products.map(product => (
-                            <tr>
+                        products.map((product, index) => (
+                            <tr key={index}>
                                 <td>{product.title}</td>
                                 <td><Link href={'products/edit/' + product._id} >
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3">
